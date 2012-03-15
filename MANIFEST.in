@@ -1,0 +1,8 @@
+recursive-include src *.py *.rst *.css *.js *.html *.conf *.jpg *.gif *.png
+recursive-include docs *.py *.rst *.css *.js *.html *.conf *.jpg *.gif *.png
+
+include AUTHORS
+include LICENSE
+include Makefile
+include README.rst
+

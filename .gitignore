@@ -1,0 +1,15 @@
+*.pyc
+*.pyo
+*.swp
+.environment_version
+.selenium_log
+.coverage*
+.noseids
+eventbrain.egg-info
+coverage.xml
+pep8.txt
+pylint.txt
+reports
+build
+dist
+
