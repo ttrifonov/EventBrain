@@ -71,16 +71,14 @@ You can describe each actor/decision in a single section, having the name of the
 Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
 passed in the class constructor when initializing it.
 
-::
-    [CPU.CPU_usage]
+[CPU.CPU_usage]::
     type=actor
     log_file=/var/log/cpu_usage.log
     pid_dir=/var/run/
     interval=3
     daemonize=true
 
-::
-    [CPU.CPU_peak]
+[CPU.CPU_peak]::
     type=decision
     log_file=/var/log/cpu_peak.log
     pid_dir=/var/run/
