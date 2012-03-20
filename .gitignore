@@ -12,4 +12,6 @@ pylint.txt
 reports
 build
 dist
+.pyproject
+.pydevproject
 
