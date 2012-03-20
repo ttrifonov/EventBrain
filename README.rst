@@ -87,17 +87,11 @@ Example config::
     
     
     [CPU.CPU_peak]
-    
     type=decision
-    
     log_file=/var/log/cpu_peak.log
-    
     pid_dir=/var/run/
-    
     interval=3
-    
     threshold=10
-    
     daemonize=true
 
 
