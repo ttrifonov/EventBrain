@@ -31,7 +31,7 @@ Run
 To run an actor or decision(or any combination of objects),
 use the launcher executable:
 
-eventbrain/bin/launcher.py --help
+``eventbrain/bin/launcher.py --help``
 
 Usage: launcher.py [options] start|stop|restart
 
@@ -71,20 +71,22 @@ You can describe each actor/decision in a single section, having the name of the
 Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
 passed in the class constructor when initializing it.
 
-``[CPU.CPU_usage]``
-``type=actor``
-``log_file=/var/log/cpu_usage.log``
-``pid_dir=/var/run/``
-``interval=3``
-``daemonize=true``
+::
+    [CPU.CPU_usage]
+    type=actor
+    log_file=/var/log/cpu_usage.log
+    pid_dir=/var/run/
+    interval=3
+    daemonize=true
 
-``[CPU.CPU_peak]``
-``type=decision``
-``log_file=/var/log/cpu_peak.log``
-``pid_dir=/var/run/``
-``interval=3``
-``threshold=10``
-``daemonize=true``
+::
+    [CPU.CPU_peak]
+    type=decision
+    log_file=/var/log/cpu_peak.log
+    pid_dir=/var/run/
+    interval=3
+    threshold=10
+    daemonize=true
 
 Running launcher with a config file is simple:
 
