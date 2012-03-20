@@ -73,26 +73,20 @@ Along with default options like type, log_file, pid_dir, you can pass various pa
 passed in the class constructor when initializing it.
 
 Example config::
-    [CPU.CPU_usage]
-
-    type=actor
+    [CPU.CPU_usage]::
+        type=actor
+        log_file=/var/log/cpu_usage.log
+        pid_dir=/var/run/
+        interval=3
+        daemonize=true
     
-    log_file=/var/log/cpu_usage.log
-    
-    pid_dir=/var/run/
-    
-    interval=3
-    
-    daemonize=true
-    
-    
-    [CPU.CPU_peak]
-    type=decision
-    log_file=/var/log/cpu_peak.log
-    pid_dir=/var/run/
-    interval=3
-    threshold=10
-    daemonize=true
+    [CPU.CPU_peak]::
+        type=decision
+        log_file=/var/log/cpu_peak.log
+        pid_dir=/var/run/
+        interval=3
+        threshold=10
+        daemonize=true
 
 
 Running launcher with a config file is simple:
