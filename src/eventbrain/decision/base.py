@@ -39,6 +39,7 @@ class DecisionBase(object):
         self.threshold = float(threshold)
         self.eval_func = eval_func
         self.queue = queue_type()
+        self.fired = False
         assert self.id, "Decision id not defined"
         self.channel = ChannelWrapper(self.id, 
                                       self.exchange_type, 
@@ -62,7 +63,12 @@ class DecisionBase(object):
         self.clean_queue(**kwargs)
         eval_value = self.eval_func(self.queue.values()) 
         if eval_value >= self.threshold:
-            self.fire(eval_value)
+            if not self.fired:
+                # Fire if not already fired
+                self.fired = True
+                self.fire(eval_value)
+        else:
+            self.fired = False
 
     def preprocess(self, data, **kwargs):
         return data
