@@ -60,7 +60,7 @@ Options:
 
 To start a single actor, use the following command:
 
-eventbrain/bin/launcher.py --type=actor -id=CPU.CPU_usage -d -p /path/to/pid -l /path/to/logs/some.log start
+::eventbrain/bin/launcher.py --type=actor --id=CPU.CPU_usage --daemonize --pid-dir=/path/to/pid --log-file=/path/to/logs/some.log start
 
 The -d(--daemonize) option will start the actor in daemon mode, otherwise will be started in blocking mode.
 
@@ -85,3 +85,9 @@ pid_dir=/var/run/
 interval=3
 threshold=10
 daemonize=true
+
+
+Running launcher with a config file is simple:
+
+::eventbrain/bin/launcher.py --config=/path/to/config.conf start
+
