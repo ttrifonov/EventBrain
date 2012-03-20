@@ -72,6 +72,7 @@ You can describe each actor/decision in a single section, having the name of the
 Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
 passed in the class constructor when initializing it.
 
+.. tabularcolumns:: |l|
 =====
 [CPU.CPU_usage]
 =====
@@ -81,6 +82,9 @@ pid_dir=/var/run/
 interval=3
 daemonize=true
 =====
+
+
+.. tabularcolumns:: |l|
 
 =====
 [CPU.CPU_peak]
