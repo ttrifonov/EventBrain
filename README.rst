@@ -60,7 +60,7 @@ Options:
 
 To start a single actor, use the following command:
 
-::eventbrain/bin/launcher.py --type=actor --id=CPU.CPU_usage --daemonize --pid-dir=/path/to/pid --log-file=/path/to/logs/some.log start
+``eventbrain/bin/launcher.py --type=actor --id=CPU.CPU_usage --daemonize --pid-dir=/path/to/pid --log-file=/path/to/logs/some.log start``
 
 The -d(--daemonize) option will start the actor in daemon mode, otherwise will be started in blocking mode.
 
@@ -71,23 +71,25 @@ You can describe each actor/decision in a single section, having the name of the
 Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
 passed in the class constructor when initializing it.
 
+=============
 [CPU.CPU_usage]
-type=actor
-log_file=/var/log/cpu_usage.log
-pid_dir=/var/run/
-interval=3
-daemonize=true
+=============
+    type=actor
+    log_file=/var/log/cpu_usage.log
+    pid_dir=/var/run/
+    interval=3
+    daemonize=true
 
+=============
 [CPU.CPU_peak]
-type=decision
-log_file=/var/log/cpu_peak.log
-pid_dir=/var/run/
-interval=3
-threshold=10
-daemonize=true
-
+=============
+    type=decision
+    log_file=/var/log/cpu_peak.log
+    pid_dir=/var/run/
+    interval=3
+    threshold=10
+    daemonize=true
 
 Running launcher with a config file is simple:
 
-::eventbrain/bin/launcher.py --config=/path/to/config.conf start
-
+``eventbrain/bin/launcher.py --config=/path/to/config.conf start``
