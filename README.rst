@@ -72,7 +72,7 @@ You can describe each actor/decision in a single section, having the name of the
 Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
 passed in the class constructor when initializing it.
 
-..
+Example config::
     [CPU.CPU_usage]
     type=actor
     log_file=/var/log/cpu_usage.log
