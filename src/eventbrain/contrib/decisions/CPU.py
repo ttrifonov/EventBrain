@@ -14,7 +14,6 @@ class CPU_peak(DecisionBase):
     id = "cpu_peak"
     
     def __init__(self, interval=5*60, threshold=90.0, **kwargs):
-        LOG.info("Received kwargs: %s" % kwargs)
         super(CPU_peak, self).__init__(interval, 
                                        threshold, 
                                        self.calculate_peak, **kwargs)

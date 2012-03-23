@@ -73,7 +73,7 @@ Along with default options like type, log_file, pid_dir, you can pass various pa
 passed in the class constructor when initializing it.
 
 * Example config:
-    \[Main]::
+    \[Main]
         host=10.0.0.1
 
         user=queueuser

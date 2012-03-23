@@ -26,6 +26,7 @@ class ActorBase(object):
         self.channel = ChannelWrapper(self.id, 
                                       self.exchange_type,
                                       publish=True,
+                                      manual_ack=False,
                                       **kwargs)
         
     def connect(self, **kwargs):
@@ -40,8 +41,12 @@ class ActorBase(object):
         self.channel.connect(**kwargs)
 
     def disconnect(self, **kwargs):
-        self.timer.stop()
-        self.channel.stop()
+        if (hasattr(self, "timer") and self.timer):
+            self.timer.stop()
+        if (hasattr(self, "channel") and self.channel):
+            if "reason" in kwargs.keys():
+                LOG.info("Disconnected with reason: %s" % kwargs['reason'])
+            self.channel.stop(**kwargs)
 
     def on_update(self, queue):
         raise NotImplementedError("This should be implemented in parent class")

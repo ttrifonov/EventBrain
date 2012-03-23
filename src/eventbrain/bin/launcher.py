@@ -14,6 +14,7 @@ usage = "Usage: %prog [options] start|stop|restart"
 def set_daemonize(option, opt_str, value, parser):
     parser.values.daemonize = True
 
+
 parser = OptionParser(usage=usage)
 
 parser.add_option("-t", "--type", dest="type",
@@ -30,6 +31,9 @@ parser.add_option("-l", "--log-file", dest="logfile", default='/dev/null',
 parser.add_option("-d", "--daemonize", dest="daemonize", action="callback", 
                   callback=set_daemonize, default=False,
                   help="Start in daemon mode")
+parser.add_option("-o", "--options", dest="opts", 
+                  default=None,
+                  help="Additional options to send to the class constructor")
 parser.add_option("-c", "--config", dest="config", 
                   default=None,
                   help="Config file with initial settings. "
@@ -60,13 +64,23 @@ class DaemonRunner(Daemon):
             kwargs = options.kwargs
         else:
             kwargs = {}
+
+        if options.opts:
+            (k, v) = options.opts.split("=")
+            kwargs[k] = v
+
+        print "kwargs", kwargs
+
         if options.user and options.password:
             kwargs['user'] = options.user 
             kwargs['password'] = options.password
         if options.host:
             kwargs['host'] = options.host  
         inst = self.klass(**kwargs)
-        inst.connect()
+        try:
+            inst.connect()
+        except KeyboardInterrupt:
+            inst.disconnect(reason="keyboard interruption")
 
 
 def run_actor(obj_id):
@@ -80,8 +94,21 @@ def run_actor(obj_id):
         daemon.klass = klass
         daemon.start()
     else:
-        inst = klass()
-        inst.connect()
+        kwargs = {}
+        if options.user and options.password:
+            kwargs['user'] = options.user 
+            kwargs['password'] = options.password
+        if options.host:
+            kwargs['host'] = options.host  
+        if options.opts:
+            (k, v) = options.opts.split("=")
+            kwargs[k] = v
+            print "kwargs", kwargs
+        inst = klass(**kwargs)
+        try:
+            inst.connect()
+        except KeyboardInterrupt:
+            inst.disconnect(reason="keyboard interruption")
     print "Done"
 
 
@@ -97,6 +124,7 @@ def run_decision(obj_id):
     print "Starting decision %s" % obj_id
     klass = _import('decisions', obj_id)
     print "Found decision with exchange %s" % klass.id
+
     if options.daemonize:
         daemon = DaemonRunner(pid_file('d', klass),
                               stdout=options.logfile,
@@ -104,8 +132,21 @@ def run_decision(obj_id):
         daemon.klass = klass
         daemon.start()
     else:
-        inst = klass()
-        inst.connect()
+        kwargs = {}
+        if options.user and options.password:
+            kwargs['user'] = options.user 
+            kwargs['password'] = options.password
+        if options.host:
+            kwargs['host'] = options.host  
+        if options.opts:
+            (k, v) = options.opts.split("=")
+            kwargs[k] = v
+            print "kwargs", kwargs
+        inst = klass(**kwargs)
+        try:
+            inst.connect()
+        except KeyboardInterrupt:
+            inst.disconnect(reason="keyboard interruption")
     print "Done"
 
 
@@ -232,7 +273,6 @@ if __name__ == "__main__":
 
     if options.type in ('actor', 'a'):
         # Actor
-        type = 'CPU_usage'
         if command == "start":
             run_actor(options.Id)
         elif command == "stop":

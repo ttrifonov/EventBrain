@@ -6,23 +6,26 @@ LOG = logging.getLogger(__name__)
 
 class ChannelWrapper(object):
     def __init__(self, channel_id, exchange_type, callback=None, 
-                 publish=False, consume=False, **kwargs):
+                 publish=False, manual_ack=False, **kwargs):
         self.channel_id = channel_id
         self.exchange_type = exchange_type
         self.callback = callback
         self.publish = publish
-        self.consume = consume
+        self.manual_ack = manual_ack
         self._create(channel_id=channel_id, exchange_type=exchange_type,
                      callback=callback, publish=publish, 
-                     consume=consume, **kwargs)
+                     manual_ack=manual_ack, **kwargs)
 
     def _create(self, channel_id, exchange_type, callback,
-                publish, consume, **kwargs):
+                publish, manual_ack, **kwargs):
         self.queue = None
         
         def on_connected(connection):
-            LOG.info("On connected")
+            LOG.info("Connected")
             connection.channel(on_channel_open)
+
+        def on_closed(frame):
+            self.connection.ioloop.stop()
 
         def push(data):
             LOG.debug("Pushing data to %s" % channel_id)
@@ -34,33 +37,35 @@ class ChannelWrapper(object):
                 LOG.exception(unicode(ex))
 
         def on_channel_open(channel):
-            LOG.info("On channel open")
+            LOG.info("Channel open")
             self.channel = channel
             self.queue = channel
-            self.queue.push = push
-            if publish:
-                channel.exchange_declare(exchange=channel_id,
+            self.queue.push = push  
+            channel.exchange_declare(exchange=channel_id,
                                      type=exchange_type,
                                      callback=on_exchange_declared)
-            else:
-                channel.queue_declare(queue=channel_id,
-                                      durable=True,
+
+        def on_exchange_declared(frame):
+            LOG.info("Exchange_declared: got exchange")
+            if not publish:
+                # We have a decision, or listener, bind a queue
+                self.channel.queue_declare(durable=True,
                                       exclusive=False,
                                       auto_delete=False,
                                       callback=on_queue_declared)
 
-        def on_exchange_declared(frame):
-            LOG.info("on_exchange_declared: got exchange")
-
         def on_queue_declared(frame):
-            LOG.info("On queue declared")
+            LOG.info("Queue declared on exchange %s[%s]" % (
+                                                            channel_id,
+                                                            exchange_type))
             self.channel.queue_bind(exchange=channel_id,
                        queue=frame.method.queue,
                        routing_key="")
-            self.channel.basic_consume(on_consume, queue=frame.method.queue)
+            self.channel.basic_consume(on_consume, no_ack=not manual_ack,
+                                       queue=frame.method.queue)
 
         def on_consume(channel, method_frame, header_frame, body):
-            if consume:
+            if manual_ack:
                 channel.basic_ack(delivery_tag=method_frame.delivery_tag)
             self.on_receive(channel_id, method_frame, header_frame, body)
 
@@ -75,6 +80,7 @@ class ChannelWrapper(object):
             params = pika.ConnectionParameters(host=self.host)
         self.connection = pika.SelectConnection(params,
                                                 on_open_callback=on_connected)
+        self.connection.add_on_close_callback(on_closed)
 
     def on_receive(self, channel, method, properties, body):
         if self.callback:
@@ -85,7 +91,8 @@ class ChannelWrapper(object):
     def connect(self, **kwargs):
         try:
             self.connection.ioloop.start()
-        except:
+        except Exception, ex:
+            LOG.exception("Channel error: %r" % str(ex))
             # retry
             self.connection.ioloop.stop()
             self.connection.close()
@@ -93,11 +100,13 @@ class ChannelWrapper(object):
             self._create(channel_id=self.channel_id,
                          exchange_type=self.exchange_type,
                          callback=self.callback, publish=self.publish, 
-                         consume=self.consume, **kwargs)
+                         manual_ack=self.manual_ack, **kwargs)
             self.connect(**kwargs)
 
-    def stop(self):
+    def stop(self, **kwargs):
         # connection.ioloop is blocking, this will stop and exit the app
-        self.connection.ioloop.stop()
-        # Close our connection
-        self.connection.close()
+        if (self.connection):
+            LOG.info("Closing connection")
+            self.connection.close()
+            # Loop until we're fully closed, will stop on its own
+            #self.connection.ioloop.start()

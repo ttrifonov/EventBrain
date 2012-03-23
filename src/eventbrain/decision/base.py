@@ -45,19 +45,25 @@ class DecisionBase(object):
                                       self.exchange_type, 
                                       self.on_update,
                                       publish=False,
-                                      consume=True,
+                                      manual_ack=False,
                                       **kwargs)
         
     def connect(self, **kwargs):
         """
         Connect to queue and start consuming
         """
-        self.timer = RepeatingTimer(self.period, lambda: self.evaluate(**kwargs))
-        self.timer.start()
-        self.channel.connect(**kwargs)
+        if (hasattr(self, "channel") and self.channel):
+            self.timer = RepeatingTimer(self.period, lambda: self.evaluate(**kwargs))
+            self.timer.start()
+            self.channel.connect(**kwargs)
 
     def disconnect(self, **kwargs):
-        pass
+        if (hasattr(self, "timer") and self.timer):
+            self.timer.stop()
+        if (hasattr(self, "channel") and self.channel):
+            if "reason" in kwargs.keys():
+                LOG.info("Disconnected with reason: %s" % kwargs['reason'])
+            self.channel.stop(**kwargs)
         
     def evaluate(self, *args, **kwargs):
         self.clean_queue(**kwargs)
