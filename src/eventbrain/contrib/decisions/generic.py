@@ -13,7 +13,7 @@ class EchoListener(DecisionBase):
 
     id = "echo-listener"
 
-    def __init__(self, interval=5*60, threshold=90.0, **kwargs):
+    def __init__(self, interval=10, threshold=90.0, **kwargs):
         if "id" not in kwargs:
             LOG.error("exchange parameter (id=...) not specified, exiting!")
             return
@@ -24,7 +24,9 @@ class EchoListener(DecisionBase):
                                        self.fake_func, **kwargs)
 
     def fake_func(self, items):
-        return 0
+        return 100
         
     def fire(self, sender, value, *args, **kwargs):
         LOG.info("Basic listener sender:[%s]" % sender)
+        self.escalate(sender, "notify-email", value)
+        self.fired = False

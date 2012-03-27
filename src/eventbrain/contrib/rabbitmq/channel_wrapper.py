@@ -7,16 +7,11 @@ LOG = logging.getLogger(__name__)
 class ChannelWrapper(object):
     def __init__(self, channel_id, exchange_type, callback=None, 
                  publish=False, manual_ack=False, **kwargs):
-        if (":" in channel_id):
-            # break to exchange and rtg key
-            tokens = channel_id.split(":")
-        else:
-            tokens = [channel_id]
+        (exch, rtg_key) = self._parse_id(channel_id)
         self.routing_wildcard_match = "match_all" in kwargs and \
                 kwargs['match_all']
-
-        self.channel_id = tokens[0]
-        self.routing_key = ".".join(tokens[1:])
+        self.channel_id = exch
+        self.routing_key = rtg_key
         self.exchange_type = exchange_type
         self.callback = callback
         self.publish = publish
@@ -24,6 +19,15 @@ class ChannelWrapper(object):
         self._create(channel_id=self.channel_id, exchange_type=exchange_type,
                      callback=callback, publish=publish, 
                      manual_ack=manual_ack, **kwargs)
+
+    def _parse_id(self, id):
+        if (":" in id):
+            # break to exchange and rtg key
+            tokens = id.split(":")
+        else:
+            tokens = [id]
+
+        return (tokens[0], ".".join(tokens[1:]))
 
     def _create(self, channel_id, exchange_type, callback,
                 publish, manual_ack, **kwargs):
@@ -44,8 +48,9 @@ class ChannelWrapper(object):
                        sender))
             try:
                 self.channel.basic_publish(exchange=self.channel_id,
-                                           routing_key="%s.%s" % (self.routing_key,
-                                                                  sender),
+                           routing_key="%s%s" % (self.routing_key + "." if 
+                                                 self.routing_key else "",
+                                                 sender),
                                            body=data)
             except Exception, ex:
                 LOG.exception(unicode(ex))
@@ -98,6 +103,8 @@ class ChannelWrapper(object):
             credentials = pika.PlainCredentials(self.user, self.password)
             params.credentials = credentials
 
+        self.params = params
+
         self.connection = pika.SelectConnection(params,
                                                 on_open_callback=on_connected)
         self.connection.add_on_close_callback(on_closed)
@@ -130,3 +137,16 @@ class ChannelWrapper(object):
             self.connection.close()
             # Loop until we're fully closed, will stop on its own
             #self.connection.ioloop.start()
+
+    def publish_once(self, sender, receiver, data, type='topic'):
+        LOG.info("Escalating from %s to %s" % (sender, receiver))
+        connection = pika.BlockingConnection(self.params)
+        channel = connection.channel()
+        (exch, rtg_key) = self._parse_id(receiver)
+        channel.exchange_declare(exchange=exch,
+                         type=type)
+        channel.basic_publish(exchange=exch,
+                      routing_key="%s%s" % (rtg_key + "." if rtg_key else "",
+                                             sender),
+                      body=data)
+        connection.close()

@@ -96,3 +96,10 @@ class DecisionBase(object):
                 values.pop(timestamp)
             else:
                 break
+
+    def escalate(self, sender, receiver, data):
+        # Used to escalate decision result to another queue
+        pub_channel = ChannelWrapper(self.id,
+                                      self.exchange_type,
+                                      publish=True)
+        pub_channel.publish_once(sender, receiver, data)
