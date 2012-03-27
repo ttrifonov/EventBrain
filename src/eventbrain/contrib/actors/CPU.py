@@ -1,5 +1,6 @@
 import logging
 import psutil
+from socket import gethostname
 
 from eventbrain.actor.base import ActorBase
 
@@ -11,13 +12,17 @@ class CPU_usage(ActorBase):
     Detects CPU usage
     """
 
-    id = "cpu_peak"
+    id = "cpu"
 
     def on_update(self):
-        LOG.info("On update %s" % (self.id))
+        sender = gethostname()
+        LOG.info("On update %s:%s" % (self.id,
+                                   sender))
         if self.channel.queue:
             cpu_usage = psutil.cpu_percent(interval=0)
-            self.channel.queue.push(str(cpu_usage))
+            self.channel.queue.push(sender, str(cpu_usage))
+        else:
+            LOG.info("No queue available for: %s" % (self.id))
 
 
 class CPU_user(ActorBase):
@@ -25,13 +30,15 @@ class CPU_user(ActorBase):
     Detects User cpu usage
     """
     
-    id = "cpu_user"
+    id = "cpu:times:user"
 
     def on_update(self):
-        LOG.info("On update %s" % (self.id))
+        sender = gethostname()
+        LOG.info("On update %s:%s" % (self.id,
+                                   sender))
         if self.channel.queue:
             cpu_user = psutil.cpu_times().user
-            self.channel.queue.push(str(cpu_user))
+            self.channel.queue.push(sender, str(cpu_user))
 
 
 class CPU_system(ActorBase):
@@ -39,10 +46,12 @@ class CPU_system(ActorBase):
     Detects System cpu usage
     """
     
-    id = "cpu_sys"
+    id = "cpu"
 
     def on_update(self):
-        LOG.info("On update %s" % (self.id))
+        sender = gethostname()
+        LOG.info("On update %s:%s" % (self.id,
+                                   sender))
         if self.channel.queue:
             cpu_sys = psutil.cpu_times().system
-            self.channel.queue.push(str(cpu_sys))
+            self.channel.queue.push(sender, str(cpu_sys))

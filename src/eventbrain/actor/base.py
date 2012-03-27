@@ -18,7 +18,7 @@ class ActorBase(object):
                 in the exchange/queue
     """
     
-    exchange_type = 'fanout'
+    exchange_type = 'topic'
 
     def __init__(self, interval=5, **kwargs):
         self.interval = int(interval)
@@ -48,5 +48,5 @@ class ActorBase(object):
                 LOG.info("Disconnected with reason: %s" % kwargs['reason'])
             self.channel.stop(**kwargs)
 
-    def on_update(self, queue):
+    def on_update(self):
         raise NotImplementedError("This should be implemented in parent class")

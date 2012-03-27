@@ -23,8 +23,9 @@ class CPU_peak(DecisionBase):
             return 0
         return sum([float(item) for item in items]) / float(len(items))
         
-    def fire(self, value, *args, **kwargs):
-        LOG.info("Detected CPU Peak: %.2f%% average, "
-                 "with threshold %.2f%% for %s seconds !!" % (value,
+    def fire(self, sender, value, *args, **kwargs):
+        LOG.info("Detected CPU Peak at [%s]: %.2f%% average, "
+                 "with threshold %.2f%% for %s seconds !!" % (sender,
+                                                              value,
                                                            self.threshold,
                                                            self.period))

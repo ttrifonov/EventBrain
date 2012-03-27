@@ -17,12 +17,9 @@ class DecisionBase(object):
     
     Arguments:
     
-    ::queue_type::    Base class for the queue. Should support
-        obj.append method
-
     ::period:: Integer, the period to collect statistics
             in seconds
-                
+
     ::threshold::    Threshold value to fire an event. 
             Depends on the aggregate_type
 
@@ -31,14 +28,14 @@ class DecisionBase(object):
             threshold-comparable value 
     """
     
-    exchange_type = 'fanout'
+    exchange_type = 'topic'
      
-    def __init__(self, period, threshold, eval_func, queue_type=dict,
+    def __init__(self, period, threshold, eval_func,
                  **kwargs):
         self.period = int(period)
         self.threshold = float(threshold)
         self.eval_func = eval_func
-        self.queue = queue_type()
+        self.queue = dict()
         self.fired = False
         assert self.id, "Decision id not defined"
         self.channel = ChannelWrapper(self.id, 
@@ -66,33 +63,36 @@ class DecisionBase(object):
             self.channel.stop(**kwargs)
         
     def evaluate(self, *args, **kwargs):
-        self.clean_queue(**kwargs)
-        eval_value = self.eval_func(self.queue.values()) 
-        if eval_value >= self.threshold:
-            if not self.fired:
-                # Fire if not already fired
-                self.fired = True
-                self.fire(eval_value)
+        for (sender, values) in self.queue.items():
+            self.clean_queue_values(values, **kwargs)
+            eval_value = self.eval_func(values.values())
+            if eval_value >= self.threshold:
+                if not self.fired:
+                    # Fire if not already fired
+                    self.fired = True
+                    self.fire(sender, eval_value)
         else:
             self.fired = False
 
     def preprocess(self, data, **kwargs):
         return data
 
-    def on_update(self, data, **kwargs):
-        LOG.info("Received data %s" % data)
-        self.queue[datetime.now()] = self.preprocess(data, **kwargs)
+    def on_update(self, sender, data, **kwargs):
+        LOG.info("Received data from %s:[%s] : %s" % (self.id,
+                                                   sender,
+                                                   data))
+        self.queue.setdefault(sender, {})[datetime.now()] = self.preprocess(data, **kwargs)
 
-    def fire(self, eval_value, *args, **kwargs):
+    def fire(self, sender, eval_value, *args, **kwargs):
         raise NotImplementedError("This should be implemented in parent class")
 
-    def clean_queue(self, **kwargs):
+    def clean_queue_values(self, values, **kwargs):
         """
         Performs a default clean, assuming the keys are timestamp values
         """
-        timestamps = sorted(self.queue.keys())
-        for timestamp in timestamps:
+        keys = sorted(values.keys())
+        for timestamp in keys:
             if (datetime.now() - timestamp).seconds > self.period:
-                self.queue.pop(timestamp)
+                values.pop(timestamp)
             else:
                 break

@@ -7,7 +7,8 @@ import logging
 from optparse import OptionParser, OptionGroup
 from eventbrain.util.daemon import Daemon
 
-logging.basicConfig(level=logging.INFO, stream=sys.stdout)
+FORMAT = '%(asctime)-15s:%(name)s:%(process)d:%(levelname)s === %(message)s'
+logging.basicConfig(format=FORMAT, level=logging.INFO, stream=sys.stdout)
 
 usage = "Usage: %prog [options] start|stop|restart"
 
@@ -46,6 +47,8 @@ server_opts.add_option("-s", "--server", dest="host", default='localhost',
                   help="RabbitMQ server. Default is %default")
 server_opts.add_option("-u", "--user", dest="user", 
                  help="RabbitMQ credentials: username")
+server_opts.add_option("-v", "--vhost", dest="vhost", 
+                 help="RabbitMQ credentials: virtual host")
 server_opts.add_option("-w", "--password", dest="password", 
                  help="RabbitMQ credentials: password")
 
@@ -66,13 +69,15 @@ class DaemonRunner(Daemon):
             kwargs = {}
 
         if options.opts:
-            (k, v) = options.opts.split("=")
-            kwargs[k] = v
+            for opt in options.opts.split(";"):
+                (k, v) = opt.split("=")
+                kwargs[k] = v
 
         print "kwargs", kwargs
 
         if options.user and options.password:
-            kwargs['user'] = options.user 
+            kwargs['user'] = options.user
+            kwargs['vhost'] = options.vhost
             kwargs['password'] = options.password
         if options.host:
             kwargs['host'] = options.host  
@@ -97,12 +102,14 @@ def run_actor(obj_id):
         kwargs = {}
         if options.user and options.password:
             kwargs['user'] = options.user 
+            kwargs['vhost'] = options.vhost
             kwargs['password'] = options.password
         if options.host:
             kwargs['host'] = options.host  
         if options.opts:
-            (k, v) = options.opts.split("=")
-            kwargs[k] = v
+            for opt in options.opts.split(";"):
+                (k, v) = opt.split("=")
+                kwargs[k] = v
             print "kwargs", kwargs
         inst = klass(**kwargs)
         try:
@@ -135,12 +142,14 @@ def run_decision(obj_id):
         kwargs = {}
         if options.user and options.password:
             kwargs['user'] = options.user 
+            kwargs['vhost'] = options.vhost
             kwargs['password'] = options.password
         if options.host:
             kwargs['host'] = options.host  
         if options.opts:
-            (k, v) = options.opts.split("=")
-            kwargs[k] = v
+            for opt in options.opts.split(";"):
+                (k, v) = opt.split("=")
+                kwargs[k] = v
             print "kwargs", kwargs
         inst = klass(**kwargs)
         try:
@@ -194,6 +203,8 @@ def from_config():
             parser.values.user = config.get("Main", "user")
         if config.has_option("Main", "password"):
             parser.values.password = config.get("Main", "password")
+        if config.has_option("Main", "vhost"):
+            parser.values.vhost = config.get("Main", "vhost")
 
     for section in sections:
         print ">>> Found section ", section

@@ -7,12 +7,21 @@ LOG = logging.getLogger(__name__)
 class ChannelWrapper(object):
     def __init__(self, channel_id, exchange_type, callback=None, 
                  publish=False, manual_ack=False, **kwargs):
-        self.channel_id = channel_id
+        if (":" in channel_id):
+            # break to exchange and rtg key
+            tokens = channel_id.split(":")
+        else:
+            tokens = [channel_id]
+        self.routing_wildcard_match = "match_all" in kwargs and \
+                kwargs['match_all']
+
+        self.channel_id = tokens[0]
+        self.routing_key = ".".join(tokens[1:])
         self.exchange_type = exchange_type
         self.callback = callback
         self.publish = publish
         self.manual_ack = manual_ack
-        self._create(channel_id=channel_id, exchange_type=exchange_type,
+        self._create(channel_id=self.channel_id, exchange_type=exchange_type,
                      callback=callback, publish=publish, 
                      manual_ack=manual_ack, **kwargs)
 
@@ -21,17 +30,22 @@ class ChannelWrapper(object):
         self.queue = None
         
         def on_connected(connection):
-            LOG.info("Connected")
+            LOG.info("Connected to %s:%s" % (self.host,
+                                             self.vhost))
             connection.channel(on_channel_open)
 
         def on_closed(frame):
             self.connection.ioloop.stop()
 
-        def push(data):
-            LOG.debug("Pushing data to %s" % channel_id)
+        def push(sender, data):
+            LOG.debug("Pushing data from [%s]:%s to exc: %s" % \
+                      (self.channel_id,
+                       self.routing_key,
+                       sender))
             try:
-                self.channel.basic_publish(exchange=channel_id,
-                                           routing_key=channel_id,
+                self.channel.basic_publish(exchange=self.channel_id,
+                                           routing_key="%s.%s" % (self.routing_key,
+                                                                  sender),
                                            body=data)
             except Exception, ex:
                 LOG.exception(unicode(ex))
@@ -41,12 +55,12 @@ class ChannelWrapper(object):
             self.channel = channel
             self.queue = channel
             self.queue.push = push  
-            channel.exchange_declare(exchange=channel_id,
+            channel.exchange_declare(exchange=self.channel_id,
                                      type=exchange_type,
                                      callback=on_exchange_declared)
 
         def on_exchange_declared(frame):
-            LOG.info("Exchange_declared: got exchange")
+            LOG.info("Exchange_declared: %s" % self.channel_id)
             if not publish:
                 # We have a decision, or listener, bind a queue
                 self.channel.queue_declare(durable=True,
@@ -55,36 +69,43 @@ class ChannelWrapper(object):
                                       callback=on_queue_declared)
 
         def on_queue_declared(frame):
-            LOG.info("Queue declared on exchange %s[%s]" % (
-                                                            channel_id,
-                                                            exchange_type))
-            self.channel.queue_bind(exchange=channel_id,
+            LOG.info("Queue declared on exchange %s:%s# [%s]" % (
+                                                    self.channel_id,
+                                                    self.routing_key,
+                                                    exchange_type))
+            if (self.routing_wildcard_match):
+                routing_key = "%s.#" % self.routing_key
+            else:
+                routing_key = self.routing_key
+            self.channel.queue_bind(exchange=self.channel_id,
                        queue=frame.method.queue,
-                       routing_key="")
+                       routing_key=routing_key)
             self.channel.basic_consume(on_consume, no_ack=not manual_ack,
                                        queue=frame.method.queue)
 
         def on_consume(channel, method_frame, header_frame, body):
             if manual_ack:
                 channel.basic_ack(delivery_tag=method_frame.delivery_tag)
-            self.on_receive(channel_id, method_frame, header_frame, body)
+            self.on_receive(self.channel_id, method_frame, header_frame, body)
 
         self.host = kwargs.get('host', "localhost")
+        self.vhost = kwargs.get("vhost", "/")
+        params = pika.ConnectionParameters(host=self.host,
+                                           virtual_host=self.vhost)
         if "user" in kwargs.keys() and "password" in kwargs.keys():
             self.user = kwargs['user']
             self.password = kwargs['password']
             credentials = pika.PlainCredentials(self.user, self.password)
-            params = pika.ConnectionParameters(host=self.host,
-                                               credentials=credentials)
-        else:
-            params = pika.ConnectionParameters(host=self.host)
+            params.credentials = credentials
+
         self.connection = pika.SelectConnection(params,
                                                 on_open_callback=on_connected)
         self.connection.add_on_close_callback(on_closed)
 
     def on_receive(self, channel, method, properties, body):
         if self.callback:
-            self.callback(body,
+            self.callback(method.routing_key,
+                          body,
                           method=method,
                           properties=properties)
 
@@ -96,7 +117,6 @@ class ChannelWrapper(object):
             # retry
             self.connection.ioloop.stop()
             self.connection.close()
-            self.connection.ioloop.start()
             self._create(channel_id=self.channel_id,
                          exchange_type=self.exchange_type,
                          callback=self.callback, publish=self.publish, 

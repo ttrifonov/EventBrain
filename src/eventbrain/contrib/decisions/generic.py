@@ -18,7 +18,7 @@ class EchoListener(DecisionBase):
             LOG.error("exchange parameter (id=...) not specified, exiting!")
             return
 
-        self.id = kwargs["id"]
+        self.id = kwargs['id']
         super(EchoListener, self).__init__(interval, 
                                        threshold, 
                                        self.fake_func, **kwargs)
@@ -26,5 +26,5 @@ class EchoListener(DecisionBase):
     def fake_func(self, items):
         return 0
         
-    def fire(self, value, *args, **kwargs):
-        LOG.info("Basic listener")
+    def fire(self, sender, value, *args, **kwargs):
+        LOG.info("Basic listener sender:[%s]" % sender)
