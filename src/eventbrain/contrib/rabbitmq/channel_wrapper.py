@@ -59,7 +59,8 @@ class ChannelWrapper(object):
             LOG.info("Channel open")
             self.channel = channel
             self.queue = channel
-            self.queue.push = push  
+            self.queue.push = push
+            self.queue.escalate = self.publish_once  
             channel.exchange_declare(exchange=self.channel_id,
                                      type=exchange_type,
                                      callback=on_exchange_declared)
@@ -74,12 +75,15 @@ class ChannelWrapper(object):
                                       callback=on_queue_declared)
 
         def on_queue_declared(frame):
-            LOG.info("Queue declared on exchange %s:%s# [%s]" % (
+            LOG.info("Queue declared on exchange %s:%s  [%s]" % (
                                                     self.channel_id,
                                                     self.routing_key,
                                                     exchange_type))
             if (self.routing_wildcard_match):
-                routing_key = "%s.#" % self.routing_key
+                if (self.routing_key):
+                    routing_key = "%s.#" % self.routing_key
+                else:
+                    routing_key = "#" 
             else:
                 routing_key = self.routing_key
             self.channel.queue_bind(exchange=self.channel_id,
@@ -138,15 +142,16 @@ class ChannelWrapper(object):
             # Loop until we're fully closed, will stop on its own
             #self.connection.ioloop.start()
 
-    def publish_once(self, sender, receiver, data, type='topic'):
+    def publish_once(self, sender, receiver, data):
         LOG.info("Escalating from %s to %s" % (sender, receiver))
-        connection = pika.BlockingConnection(self.params)
-        channel = connection.channel()
-        (exch, rtg_key) = self._parse_id(receiver)
-        channel.exchange_declare(exchange=exch,
-                         type=type)
-        channel.basic_publish(exchange=exch,
-                      routing_key="%s%s" % (rtg_key + "." if rtg_key else "",
-                                             sender),
-                      body=data)
-        connection.close()
+
+        (exch, _) = self._parse_id(receiver)
+        def on_exchange(frame):
+            self.channel.basic_publish(exchange=exch,
+                              routing_key=sender,
+                              body=data)
+
+        self.channel.exchange_declare(exchange=exch,
+                                     type='topic',
+                                     callback=on_exchange)
+

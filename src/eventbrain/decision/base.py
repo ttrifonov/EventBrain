@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from exceptions import NotImplementedError
 
@@ -17,13 +17,13 @@ class DecisionBase(object):
     
     Arguments:
     
-    ::period:: Integer, the period to collect statistics
+    .. period:: Integer, the period to collect statistics
             in seconds
 
-    ::threshold::    Threshold value to fire an event. 
+    .. threshold::    Threshold value to fire an event. 
             Depends on the aggregate_type
 
-    ::eval_func:: Function for evaluation logic. 
+    .. eval_func:: Function for evaluation logic. 
             Should accept iterable values and return
             threshold-comparable value 
     """
@@ -99,7 +99,7 @@ class DecisionBase(object):
 
     def escalate(self, sender, receiver, data):
         # Used to escalate decision result to another queue
-        pub_channel = ChannelWrapper(self.id,
-                                      self.exchange_type,
-                                      publish=True)
-        pub_channel.publish_once(sender, receiver, data)
+        try:
+            self.channel.queue.escalate(sender, receiver, unicode(data))
+        except Exception, ex:
+            LOG.exception(ex)

@@ -14,7 +14,7 @@ class ActorBase(object):
     
     Arguments:
     
-    ::interval::    Time in seconds between pushing data 
+    .. interval::    Time in seconds between pushing data 
                 in the exchange/queue
     """
     
