@@ -1,3 +1,4 @@
+import signal
 import logging
 from datetime import datetime
 
@@ -49,12 +50,19 @@ class DecisionBase(object):
         """
         Connect to queue and start consuming
         """
+        # Set the signal handler to gracefully disconnect
+        signal.signal(signal.SIGTERM, self._on_signal_term)
         if (hasattr(self, "channel") and self.channel):
             self.timer = RepeatingTimer(self.period, lambda: self.evaluate(**kwargs))
             self.timer.start()
             self.channel.connect(**kwargs)
 
+    def _on_signal_term(self, signum, frame):
+        LOG.info('Received signal: %s' % signum)
+        self.disconnect()
+        
     def disconnect(self, **kwargs):
+        LOG.info('Disconnecting %s' % self.id)
         if (hasattr(self, "timer") and self.timer):
             self.timer.stop()
         if (hasattr(self, "channel") and self.channel):
@@ -100,6 +108,11 @@ class DecisionBase(object):
     def escalate(self, sender, receiver, data):
         # Used to escalate decision result to another queue
         try:
-            self.channel.queue.escalate(sender, receiver, unicode(data))
+            if self.channel.queue:
+                self.channel.queue.escalate(sender, receiver, unicode(data))
+            else:
+                LOG.warn("No queue found to escalate %s %s %s" % (sender,
+                                                                  receiver,
+                                                                  data))
         except Exception, ex:
             LOG.exception(ex)

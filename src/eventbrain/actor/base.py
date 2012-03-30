@@ -1,3 +1,4 @@
+import signal
 import logging
 
 from eventbrain.contrib.rabbitmq.channel_wrapper import ChannelWrapper
@@ -34,11 +35,16 @@ class ActorBase(object):
         Connect to queue and start publishing data
         on the specified interval
         """
+        signal.signal(signal.SIGTERM, self._on_signal_term)
 
         LOG.info("Starting ")
         self.timer = RepeatingTimer(self.interval, self.on_update)
         self.timer.start()
         self.channel.connect(**kwargs)
+
+    def _on_signal_term(self, signum, frame):
+        LOG.info('Received signal: %s' % signum)
+        self.disconnect()
 
     def disconnect(self, **kwargs):
         if (hasattr(self, "timer") and self.timer):

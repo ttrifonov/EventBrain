@@ -25,7 +25,7 @@ class EchoListener(DecisionBase):
 
     def fake_func(self, items):
         return 100
-        
+
     def fire(self, sender, value, *args, **kwargs):
         LOG.info("Basic listener sender:[%s]" % sender)
         self.escalate(sender, "notify-email", value)

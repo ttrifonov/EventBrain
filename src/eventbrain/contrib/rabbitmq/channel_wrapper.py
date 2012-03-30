@@ -54,6 +54,7 @@ class ChannelWrapper(object):
                                            body=data)
             except Exception, ex:
                 LOG.exception(unicode(ex))
+                self._reconnect()
 
         def on_channel_open(channel):
             LOG.info("Channel open")
@@ -113,6 +114,15 @@ class ChannelWrapper(object):
                                                 on_open_callback=on_connected)
         self.connection.add_on_close_callback(on_closed)
 
+    def _reconnect(self):
+        self.connection.ioloop.stop()
+        self.connection.close()
+        self._create(channel_id=self.channel_id,
+                     exchange_type=self.exchange_type,
+                     callback=self.callback, publish=self.publish, 
+                     manual_ack=self.manual_ack, **self.connection_kwargs)
+        self.connect(**self.connection_kwargs)
+
     def on_receive(self, channel, method, properties, body):
         if self.callback:
             self.callback(method.routing_key,
@@ -122,25 +132,20 @@ class ChannelWrapper(object):
 
     def connect(self, **kwargs):
         try:
+            self.connection_kwargs = kwargs
             self.connection.ioloop.start()
         except Exception, ex:
             LOG.exception("Channel error: %r" % str(ex))
             # retry
-            self.connection.ioloop.stop()
-            self.connection.close()
-            self._create(channel_id=self.channel_id,
-                         exchange_type=self.exchange_type,
-                         callback=self.callback, publish=self.publish, 
-                         manual_ack=self.manual_ack, **kwargs)
-            self.connect(**kwargs)
+            if not self.connection.closing:
+                self._reconnect(**self.connection_kwargs)
 
     def stop(self, **kwargs):
         # connection.ioloop is blocking, this will stop and exit the app
         if (self.connection):
             LOG.info("Closing connection")
+            self.connection.ioloop.stop()
             self.connection.close()
-            # Loop until we're fully closed, will stop on its own
-            #self.connection.ioloop.start()
 
     def publish_once(self, sender, receiver, data):
         LOG.info("Escalating from %s to %s" % (sender, receiver))
@@ -154,4 +159,3 @@ class ChannelWrapper(object):
         self.channel.exchange_declare(exchange=exch,
                                      type='topic',
                                      callback=on_exchange)
-
