@@ -69,8 +69,13 @@ class DecisionBase(object):
             if "reason" in kwargs.keys():
                 LOG.info("Disconnected with reason: %s" % kwargs['reason'])
             self.channel.stop(**kwargs)
+        if (hasattr(self, "clean") and callable(self.clean)):
+            self.clean()
         
     def evaluate(self, *args, **kwargs):
+        if not self.eval_func:
+            return
+
         for (sender, values) in self.queue.items():
             self.clean_queue_values(values, **kwargs)
             eval_value = self.eval_func(values.values())

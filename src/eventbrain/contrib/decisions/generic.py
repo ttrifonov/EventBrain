@@ -15,7 +15,7 @@ class EchoListener(DecisionBase):
 
     def __init__(self, interval=10, threshold=90.0, **kwargs):
         if "id" not in kwargs:
-            LOG.error("exchange parameter (id=...) not specified, exiting!")
+            LOG.error("exchange parameter (id=...) not specified!")
             return
 
         self.id = kwargs['id']
