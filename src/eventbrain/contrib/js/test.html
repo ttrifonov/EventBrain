@@ -31,18 +31,27 @@ MQ.configure({
 //declare a direct exchange
 MQ.topic("cpu");
 var data = [];
-var x_scale = 100;
+var x_scale = 50;
+
+var initial = new Date();
 for (var i=0; i<x_scale; ++i){
-    data.push([i, 0]);
+    data.push([initial, 0]);
 }
-var index = data.length;
 
 //bind your auto queue to a topic exchange, with a routingKey
 MQ.queue("auto").bind("cpu", "#").callback(function(m) {
     console.log("topic message received", m.data, m.exchange, m.routingKey);
     data.shift();
-    data.push([index++, parseFloat(m.data)]);
-    $.plot($("#graph"), [data]);
+    var currentTime = new Date();
+    var hours = currentTime.getHours()
+    var minutes = currentTime.getMinutes()
+    data.push([new Date(), parseFloat(m.data)]);
+    $.plot($("#graph"), [data], {
+        xaxis: {
+            minTickSize: [1, "minute"],
+            mode: "time",
+            timeformat: "%H:%M",
+        }});
 });
 
 swfobject.embedSWF(
