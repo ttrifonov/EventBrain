@@ -4,7 +4,7 @@ This example uses ampq-js tool(https://github.com/dansimpson/amqp-js) and shows 
 
 2. Make the needed modifications in the html file for host/vhost/username/password(for some reason username/password doesn't seem to work in amqp-js, so use the default guest:guest).
 
-3. run this simple django site:
+3. Run this simple django site:
 	python manage.py runserver
 
 4. Load in browser test.html page, e.g. http://localhost:8000/test.html
