@@ -1,0 +1,68 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<body>
+<head>
+	<title>Test</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+	<script src="https://raw.github.com/dansimpson/amqp-js/master/javascripts/swfobject.js" type="text/javascript"></script>
+	<script src="https://raw.github.com/dansimpson/amqp-js/master/javascripts/mq.js" type="text/javascript"></script>
+	<script src="http://people.iola.dk/olau/flot/jquery.flot.js" type="text/javascript"></script>
+</head>
+
+<body>
+
+AMPQ: <div id="AMQPProxy">Log CPU usage:<br/></div>
+<div id="graph" style="width:600px;height:300px;"></div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+//configure params here
+MQ.configure({
+    //enable logging to the console
+//    logger: console,
+    host: "localhost",
+    port: 5672,
+    user: "guest",
+    password: "guest",
+    vhost: "test",
+});
+
+//declare a direct exchange
+MQ.topic("cpu");
+var data = [];
+var x_scale = 100;
+for (var i=0; i<x_scale; ++i){
+    data.push([i, 0]);
+}
+var index = data.length;
+
+//bind your auto queue to a topic exchange, with a routingKey
+MQ.queue("auto").bind("cpu", "#").callback(function(m) {
+    console.log("topic message received", m.data, m.exchange, m.routingKey);
+    data.shift();
+    data.push([index++, parseFloat(m.data)]);
+    $.plot($("#graph"), [data]);
+});
+
+swfobject.embedSWF(
+    "media/amqp.swf",
+    "AMQPProxy",
+    "1",
+    "1",
+    "9",
+    "media/expressInstall.swf",
+    {},
+    {
+        allowScriptAccess: "always",
+        wmode   : "opaque",
+        bgcolor : "#ff0000"
+    },
+    {}
+);
+
+});
+</script>
+</body>
+</html>
+
