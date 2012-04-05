@@ -22,7 +22,7 @@ class ActorBase(object):
     exchange_type = 'topic'
 
     def __init__(self, interval=5, **kwargs):
-        self.interval = int(interval)
+        self.interval = float(interval)
         assert self.id, "Actor 'id' property not set"
         self.channel = ChannelWrapper(self.id, 
                                       self.exchange_type,

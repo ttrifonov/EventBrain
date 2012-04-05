@@ -61,7 +61,7 @@ class ChannelWrapper(object):
             self.channel = channel
             self.queue = channel
             self.queue.push = push
-            self.queue.escalate = self.publish_once  
+            self.queue.escalate = self.publish_once
             channel.exchange_declare(exchange=self.channel_id,
                                      type=exchange_type,
                                      callback=on_exchange_declared)
@@ -150,12 +150,17 @@ class ChannelWrapper(object):
     def publish_once(self, sender, receiver, data):
         LOG.info("Escalating from %s to %s" % (sender, receiver))
 
-        (exch, _) = self._parse_id(receiver)
-        def on_exchange(frame):
-            self.channel.basic_publish(exchange=exch,
-                              routing_key=sender,
-                              body=data)
-
-        self.channel.exchange_declare(exchange=exch,
-                                     type='topic',
-                                     callback=on_exchange)
+        try:
+            (exch, _) = self._parse_id(receiver)
+    
+            def on_channel(channel):
+                LOG.info("New channel opened: %s" % receiver)
+                channel.exchange_declare(exchange=exch,
+                                         type='topic')
+                channel.basic_publish(exchange=exch,
+                                      routing_key=sender,
+                                      body=data)
+    
+            self.connection.channel(on_channel)
+        except Exception, ex:
+            LOG.exception(ex)
