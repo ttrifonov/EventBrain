@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Eventbrain : EventBrain is a scalable framework for implementing cluster-wide monitoring and logging system, based on a queue management software like RabbitMQ, Redis, ZeroMQ etc." />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Eventbrain</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/everbread/EventBrain">Fork Me on GitHub</a>
+
+          <h1 id="project_title">Eventbrain</h1>
+          <h2 id="project_tagline">EventBrain is a scalable framework for implementing cluster-wide monitoring and logging system, based on a queue management software like RabbitMQ, Redis, ZeroMQ etc.</h2>
+
+          <section id="downloads">
+            <a class="zip_download_link" href="https://github.com/everbread/EventBrain/zipball/master">Download this project as a .zip file</a>
+            <a class="tar_download_link" href="https://github.com/everbread/EventBrain/tarball/master">Download this project as a tar.gz file</a>
+          </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>EventBrain</p>
+
+<p>EventBrain is a Python library to provide an easy configurable framework
+for creating and configuring multiple nodes accross multiple servers(or cluster)
+that perform simple tasks(a.k.a. actor) like parsing logs, checking system status,
+applying custom logic, and send some chunks of data to RabbitMQ (or other
+AMPQ-compatible queue management system), with the ability to attach 
+multiple listeners(a.k.a. decision) which apply some logic and redirect 
+the output to another actors, like notifyers, notification services or other.
+The whole system relies on the exchanges and queues from AMPQ to define the 
+domains of application - i.e. if a decision listener waits for peak load of 
+average 90% for 5 min period - when it detects such event - it will fire a new
+event to another exchange, and all actors, attached to that event will be 
+responsible to perform the needed notification or other actor. Each node(either 
+actor or decision) can be started on one or more machines, with the only 
+requirement to have access to the main AMPQ.</p>
+
+<p>Install</p>
+
+<p>Install using:</p>
+
+<p><code>python setup.py install</code></p>
+
+<p>Run</p>
+
+<p>To run an actor or decision(or any combination of objects),
+use the launcher executable:</p>
+
+<p><code>eventbrain/bin/launcher.py --help</code></p>
+
+<p>Usage: launcher.py [options] start|stop|restart</p>
+
+<p>Options:
+  -h, --help            show this help message and exit
+  -t TYPE, --type=TYPE  type of object to process('actor', 'a' or 'decision',
+                        'd')
+  -i ID, --id=ID        Id of the object to process
+  -p PID_DIR, --pid-dir=PID_DIR
+                        Directory to store pid files for daemonized objects.
+                        Default path is /var/run/eventbrain/
+  -l LOGFILE, --log-file=LOGFILE
+                        File to write logs. Default is /dev/null
+  -d, --daemonize       Start in daemon mode
+  -c CONFIG, --config=CONFIG
+                        Config file with initial settings. If a config file is
+                        provided, other parameters are ignored.</p>
+
+<p>RabbitMQ options:
+    -s HOST, --server=HOST
+                        RabbitMQ server. Default is localhost
+    -u USER, --user=USER
+                        RabbitMQ credentials: username
+    -w PASSWORD, --password=PASSWORD
+                        RabbitMQ credentials: password</p>
+
+<p>To start a single actor, use the following command:</p>
+
+<p><code>eventbrain/bin/launcher.py --type=actor --id=CPU.CPU_usage --daemonize --pid-dir=/path/to/pid --log-file=/path/to/logs/some.log start</code></p>
+
+<p>The <code>-d(--daemonize)</code> option will start the actor in daemon mode, otherwise will be started in blocking mode.</p>
+
+<p>You can see an example config file in <code>eventbrain/bin/example.conf</code>. Using a config file gives you the
+ability to start multiple actors/decisions on a single server.</p>
+
+<p>You can describe each actor/decision in a single section, having the name of the module.class to be executed.
+Along with default options like type, log_file, pid_dir, you can pass various parameters, which will be
+passed in the class constructor when initializing it.</p>
+
+<ul>
+<li>
+<p>Example config:
+[Main]
+    host=10.0.0.1</p>
+
+<pre><code>user=queueuser
+
+password=secret
+</code></pre>
+
+<p>[CPU.CPU_usage]
+    type=actor</p>
+
+<pre><code>log_file=/var/log/cpu_usage.log
+
+pid_dir=/var/run/
+
+interval=3
+
+daemonize=true
+</code></pre>
+
+<p>[CPU.CPU_peak]
+    type=decision</p>
+
+<pre><code>log_file=/var/log/cpu_peak.log
+
+pid_dir=/var/run/
+
+interval=3
+
+threshold=10
+
+daemonize=true
+</code></pre>
+</li>
+<li>
+<p>Running launcher with a config file is simple:</p>
+
+<p><code>eventbrain/bin/launcher.py --config=/path/to/config.conf start</code></p>
+</li>
+</ul>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Eventbrain maintained by <a href="https://github.com/everbread">everbread</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
