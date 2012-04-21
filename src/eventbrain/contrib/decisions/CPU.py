@@ -12,17 +12,17 @@ class CPU_peak(DecisionBase):
     """
 
     id = "cpu_peak"
-    
-    def __init__(self, interval=5*60, threshold=90.0, **kwargs):
-        super(CPU_peak, self).__init__(interval, 
-                                       threshold, 
+
+    def __init__(self, interval=5 * 60, threshold=90.0, **kwargs):
+        super(CPU_peak, self).__init__(interval,
+                                       threshold,
                                        self.calculate_peak, **kwargs)
 
     def calculate_peak(self, items):
         if not items:
             return 0
         return sum([float(item) for item in items]) / float(len(items))
-        
+
     def fire(self, sender, value, *args, **kwargs):
         LOG.info("Detected CPU Peak at [%s]: %.2f%% average, "
                  "with threshold %.2f%% for %s seconds !!" % (sender,

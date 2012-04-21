@@ -4,7 +4,8 @@ from datetime import datetime
 
 from exceptions import NotImplementedError
 
-from eventbrain.contrib.rabbitmq.channel_wrapper import ChannelWrapper
+#from eventbrain.contrib.rabbitmq.pika_wrapper import ChannelWrapper
+from eventbrain.contrib.rabbitmq.kombu_wrapper import ChannelWrapper
 from eventbrain.util.repeating_timer import RepeatingTimer
 
 LOG = logging.getLogger(__name__)
@@ -15,22 +16,22 @@ class DecisionBase(object):
     Base class for Decision object. Defines common methods
     and properties, needed for a Decision class to operate
     with data, coming from the sources
-    
+
     Arguments:
-    
+
     .. period:: Integer, the period to collect statistics
             in seconds
 
-    .. threshold::    Threshold value to fire an event. 
+    .. threshold::    Threshold value to fire an event.
             Depends on the aggregate_type
 
-    .. eval_func:: Function for evaluation logic. 
+    .. eval_func:: Function for evaluation logic.
             Should accept iterable values and return
-            threshold-comparable value 
+            threshold-comparable value
     """
-    
+
     exchange_type = 'topic'
-     
+
     def __init__(self, period, threshold, eval_func,
                  **kwargs):
         self.period = int(period)
@@ -39,13 +40,23 @@ class DecisionBase(object):
         self.queue = dict()
         self.fired = False
         assert self.id, "Decision id not defined"
-        self.channel = ChannelWrapper(self.id, 
-                                      self.exchange_type, 
+        self.channel = ChannelWrapper(self.id,
+                                      self.exchange_type,
                                       self.on_update,
                                       publish=False,
                                       manual_ack=False,
                                       **kwargs)
-        
+        self._kwargs = kwargs
+        self._create()
+
+    def _create(self):
+        """
+        Called in the constructor, useful to be re-declared
+        in a child classes to apply additional actions upon
+        instance creation
+        """
+        pass
+
     def connect(self, **kwargs):
         """
         Connect to queue and start consuming
@@ -53,14 +64,15 @@ class DecisionBase(object):
         # Set the signal handler to gracefully disconnect
         signal.signal(signal.SIGTERM, self._on_signal_term)
         if (hasattr(self, "channel") and self.channel):
-            self.timer = RepeatingTimer(self.period, lambda: self.evaluate(**kwargs))
+            self.timer = RepeatingTimer(self.period,
+                                        lambda: self.evaluate(**kwargs))
             self.timer.start()
             self.channel.connect(**kwargs)
 
     def _on_signal_term(self, signum, frame):
         LOG.info('Received signal: %s' % signum)
         self.disconnect()
-        
+
     def disconnect(self, **kwargs):
         LOG.info('Disconnecting %s' % self.id)
         if (hasattr(self, "timer") and self.timer):
@@ -71,7 +83,7 @@ class DecisionBase(object):
             self.channel.stop(**kwargs)
         if (hasattr(self, "clean") and callable(self.clean)):
             self.clean()
-        
+
     def evaluate(self, *args, **kwargs):
         if not self.eval_func:
             return
@@ -94,7 +106,9 @@ class DecisionBase(object):
         LOG.info("Received data from %s:[%s] : %s" % (self.id,
                                                    sender,
                                                    data))
-        self.queue.setdefault(sender, {})[datetime.now()] = self.preprocess(data, **kwargs)
+        self.queue.setdefault(sender,
+                              {})[datetime.now()] = self.preprocess(data,
+                                                                    **kwargs)
 
     def fire(self, sender, eval_value, *args, **kwargs):
         raise NotImplementedError("This should be implemented in parent class")

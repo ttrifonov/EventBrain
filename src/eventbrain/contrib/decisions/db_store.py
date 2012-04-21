@@ -19,21 +19,21 @@ class DbStorage(DecisionBase):
 
     id = "cpu:#"
 
-    def __init__(self, interval=10, threshold=90.0, **kwargs):
-        if "db_name" not in kwargs and \
-            "db_type" not in kwargs:
+    def _create(self):
+        if "db_name" not in self._kwargs and \
+            "db_type" not in self._kwargs:
             LOG.error("Db name/type not specified!")
             return
 
-        self.db_name = kwargs['db_name']
-        self.db_type = kwargs['db_type']
-        self.db_host = kwargs.get('db_host', 'localhost')
-        self.db_port = kwargs.get('db_port', "")
+        self.db_name = self._kwargs['db_name']
+        self.db_type = self._kwargs['db_type']
+        self.db_host = self._kwargs.get('db_host', 'localhost')
+        self.db_port = self._kwargs.get('db_port', "")
         if self.db_port:
             self.db_port = ":%s" % self.db_port
-        self.db_table = kwargs.get('db_table', 'logstorage')
-        self.db_user = kwargs.get('db_user', '')
-        self.db_pass = kwargs.get('db_pass', '')
+        self.db_table = self._kwargs.get('db_table', 'logstorage')
+        self.db_user = self._kwargs.get('db_user', '')
+        self.db_pass = self._kwargs.get('db_pass', '')
         if (self.db_user):
             conn_string = "%s:%s@%s%s/%s" % (self.db_user,
                                            self.db_pass,
@@ -57,7 +57,7 @@ class DbStorage(DecisionBase):
             Column('data', String(512)))
 
         Base = declarative_base()
-        
+
         class Log(Base):
             __table__ = meta.tables[self.db_table]
 
@@ -68,12 +68,10 @@ class DbStorage(DecisionBase):
                                         self.data)
 
         self.table = Log
-        if 'reset_table' in kwargs.keys() and kwargs['reset_table']:
+        if 'reset_table' in self._kwargs.keys() and \
+                self._kwargs['reset_table']:
             meta.drop_all(bind=self.engine)
         meta.create_all(bind=self.engine)
-        super(DbStorage, self).__init__(interval, 
-                                       threshold, 
-                                       None, **kwargs)
 
     def on_update(self, sender, data, **kwargs):
         LOG.info("Received data from %s:[%s] : %s" % (self.id,

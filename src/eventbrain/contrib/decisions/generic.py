@@ -19,16 +19,12 @@ class EchoListener(DecisionBase):
             return
 
         self.id = kwargs['id']
-        super(EchoListener, self).__init__(interval, 
-                                       threshold, 
+        super(EchoListener, self).__init__(interval,
+                                       threshold,
                                        self.fake_func, **kwargs)
 
     def fake_func(self, items):
-        if items:
-            return float(items[-1]) 
-        else:
-            return 0
+        return 0
 
     def fire(self, sender, value, *args, **kwargs):
         LOG.info("Basic listener sender:[%s]" % sender)
-        self.escalate(sender, "notify-email", value)

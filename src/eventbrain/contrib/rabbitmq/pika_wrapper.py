@@ -1,11 +1,17 @@
 import pika
 import logging
+import time
 
 LOG = logging.getLogger(__name__)
 
 
 class ChannelWrapper(object):
-    def __init__(self, channel_id, exchange_type, callback=None, 
+    """
+    Wrapper for pika library for AMQP
+    """
+    reconnect_timeout = 3
+
+    def __init__(self, channel_id, exchange_type, callback=None,
                  publish=False, manual_ack=False, **kwargs):
         (exch, rtg_key) = self._parse_id(channel_id)
         self.routing_wildcard_match = "match_all" in kwargs and \
@@ -17,8 +23,9 @@ class ChannelWrapper(object):
         self.publish = publish
         self.manual_ack = manual_ack
         self._create(channel_id=self.channel_id, exchange_type=exchange_type,
-                     callback=callback, publish=publish, 
+                     callback=callback, publish=publish,
                      manual_ack=manual_ack, **kwargs)
+        self.stopping = False
 
     def _parse_id(self, id):
         if (":" in id):
@@ -32,23 +39,33 @@ class ChannelWrapper(object):
     def _create(self, channel_id, exchange_type, callback,
                 publish, manual_ack, **kwargs):
         self.queue = None
-        
+
         def on_connected(connection):
             LOG.info("Connected to %s:%s" % (self.host,
                                              self.vhost))
             connection.channel(on_channel_open)
 
         def on_closed(frame):
-            self.connection.ioloop.stop()
+            if not self.stopping:
+                # unexpected close, try reconnect
+                LOG.warn("Invoked unexpected on_close, "
+                         "trying to reconnect")
+                self.connection.add_timeout(self.reconnect_timeout,
+                                            self._reconnect)
+
+        def on_backpressure():
+            LOG.warn("Backpressure detected")
 
         def push(sender, data):
-            LOG.debug("Pushing data from [%s]:%s to exc: %s" % \
-                      (self.channel_id,
-                       self.routing_key,
-                       sender))
+            LOG.info("Pushing data from [%s]:%s to exc: %s" % \
+                      (sender,
+                       "%s%s" % (self.routing_key + "." if
+                                 self.routing_key else "",
+                                 sender),
+                       self.channel_id))
             try:
                 self.channel.basic_publish(exchange=self.channel_id,
-                           routing_key="%s%s" % (self.routing_key + "." if 
+                           routing_key="%s%s" % (self.routing_key + "." if
                                                  self.routing_key else "",
                                                  sender),
                                            body=data)
@@ -84,7 +101,7 @@ class ChannelWrapper(object):
                 if (self.routing_key):
                     routing_key = "%s.#" % self.routing_key
                 else:
-                    routing_key = "#" 
+                    routing_key = "#"
             else:
                 routing_key = self.routing_key
             self.channel.queue_bind(exchange=self.channel_id,
@@ -110,16 +127,21 @@ class ChannelWrapper(object):
 
         self.params = params
 
+        reconnect = pika.reconnection_strategies.SimpleReconnectionStrategy()
         self.connection = pika.SelectConnection(params,
-                                                on_open_callback=on_connected)
-        self.connection.add_on_close_callback(on_closed)
+                                            on_open_callback=on_connected,
+                                            reconnection_strategy=reconnect)
+        #self.connection.add_on_close_callback(on_closed)
+        self.connection.add_backpressure_callback(on_backpressure)
 
     def _reconnect(self):
+        LOG.info("Trying reconnect...")
+        self.queue = None
         self.connection.ioloop.stop()
         self.connection.close()
         self._create(channel_id=self.channel_id,
                      exchange_type=self.exchange_type,
-                     callback=self.callback, publish=self.publish, 
+                     callback=self.callback, publish=self.publish,
                      manual_ack=self.manual_ack, **self.connection_kwargs)
         self.connect(**self.connection_kwargs)
 
@@ -141,6 +163,7 @@ class ChannelWrapper(object):
                 self._reconnect(**self.connection_kwargs)
 
     def stop(self, **kwargs):
+        self.stopping = True
         # connection.ioloop is blocking, this will stop and exit the app
         if (self.connection):
             LOG.info("Closing connection")
@@ -152,7 +175,7 @@ class ChannelWrapper(object):
 
         try:
             (exch, _) = self._parse_id(receiver)
-    
+
             def on_channel(channel):
                 LOG.info("New channel opened: %s" % receiver)
                 channel.exchange_declare(exchange=exch,
@@ -160,7 +183,7 @@ class ChannelWrapper(object):
                 channel.basic_publish(exchange=exch,
                                       routing_key=sender,
                                       body=data)
-    
+
             self.connection.channel(on_channel)
         except Exception, ex:
             LOG.exception(ex)
