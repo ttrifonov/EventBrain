@@ -107,3 +107,4 @@ passed in the class constructor when initializing it.
 * Running launcher with a config file is simple:
 
     ``eventbrain/bin/launcher.py --config=/path/to/config.conf start``
+
